@@ -1,9 +1,8 @@
-#advancecomp
-FROM fuzzers/afl:2.52
+FROM fuzzers/afl:2.52 as builder
 
 RUN apt-get update
 RUN apt install -y build-essential wget git clang cmake  automake autotools-dev  libtool zlib1g zlib1g-dev libexif-dev libjpeg-dev
-RUN git clone https://github.com/amadvance/advancecomp.git
+ADD . /advancecomp
 WORKDIR /advancecomp
 RUN aclocal
 RUN autoconf
@@ -15,7 +14,10 @@ RUN make
 RUN make install
 RUN mkdir /advancecompCorpus
 RUN cp ./test/*.png /advancecompCorpus
-RUN  rm -f /advancecompCorpus/italy.png
+
+# remove big fle
+RUN rm -f /advancecompCorpus/italy.png
+
 RUN wget https://github.com/strongcourage/fuzzing-corpus/blob/master/png/mozilla/012-dispose-none.png
 RUN wget https://github.com/strongcourage/fuzzing-corpus/blob/master/png/ImageMagick/arc.png
 RUN wget https://github.com/strongcourage/fuzzing-corpus/blob/master/png/ImageMagick/arc.png
@@ -36,5 +38,9 @@ RUN wget https://github.com/strongcourage/fuzzing-corpus/blob/master/png/ImageMa
 RUN wget https://github.com/strongcourage/fuzzing-corpus/blob/master/png/ImageMagick/wizard.png
 RUN mv *.png /advancecompCorpus
 
-ENTRYPOINT ["afl-fuzz", "-i", "/advancecompCorpus", "-o", "/advancecompOut"]
-CMD ["/usr/local/bin/advpng", "-z", "@@"]
+FROM fuzzers/afl:2.52
+COPY --from=builder /usr/local/bin/advpng /
+COPY --from=builder /advancecompCorpus/*.png /testsuite/
+
+ENTRYPOINT ["afl-fuzz", "-i", "/testsuite/", "-o", "/advancecompOut"]
+CMD ["/advpng", "-z", "@@"]
