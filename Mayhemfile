@@ -1,0 +1,6 @@
+project: advancecomp
+target: advancecomp
+
+cmds:
+  - cmd: /advpng -z @@
+    env: {}
